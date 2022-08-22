@@ -1,4 +1,6 @@
 import base64
+import os
+
 import botocore.client
 import boto3
 import io
@@ -19,6 +21,7 @@ from .utilities import (
     get_lambda_using_environment_port,
     get_lambda_using_network_mode,
     get_test_zip_largeresponse,
+    get_test_zip_file_local_volume_test,
 )
 
 _lambda_region = "us-west-2"
@@ -183,10 +186,10 @@ def test_invoke_lambda_using_environment_port():
 @mock_lambda
 def test_invoke_lambda_using_networkmode():
     """
-    Special use case - verify that Lambda can send a request to 'http://localhost'
-    This is only possible when the `network_mode` is set to host in the Docker args
-    Test is only run in our CI (for now)
-    """
+        Special use case - verify that Lambda can send a request to 'http://localhost'
+        This is only possible when the `network_mode` is set to host in the Docker args
+        Test is only run in our CI (for now)
+        """
     if not settings.moto_network_mode():
         raise SkipTest("Can only test this when NETWORK_MODE is specified")
     conn = boto3.client("lambda", _lambda_region)
@@ -207,6 +210,40 @@ def test_invoke_lambda_using_networkmode():
     functions = json.loads(response.decode("utf-8"))["response"]
     function_names = [f["FunctionName"] for f in functions]
     function_names.should.contain(function_name)
+
+
+@pytest.mark.network
+@mock_lambda
+def test_invoke_lambda_using_local_volume_path():
+    """
+        Ensure that creating a function respects the setting of MOTO_DOCKER_LOCAL_VOLUME_PATH
+    """
+    volume_path = settings.moto_docker_local_volume_path()
+    if not volume_path:
+        raise SkipTest("Can only test this when MOTO_DOCKER_LOCAL_VOLUME_PATH is specified")
+
+    assert os.path.exists(volume_path), "Test not set up correctly. Directory " + \
+                                        settings.moto_docker_local_volume_path() + \
+                                        " does not exist"
+
+    conn = boto3.client("lambda", _lambda_region)
+    function_name = str(uuid4())[0:6]
+    conn.create_function(
+        FunctionName=function_name,
+        Runtime="python3.7",
+        Role=get_role_name(),
+        Handler="lambda_function.lambda_handler",
+        Code={"ZipFile": get_test_zip_file_local_volume_test()},
+    )
+    output = conn.invoke(
+        FunctionName=function_name, InvocationType="Event", Payload="{}"
+    )
+
+    # We want to ensure that the local volume location we requested was actually used.
+    # To do this, we need to check the contents of the folder as set to see if there
+    # are any contents
+    assert len(os.listdir(volume_path)) > 0, "requested local volume path " + volume_path + " was empty"
+
 
 
 @pytest.mark.network

@@ -144,6 +144,15 @@ def lambda_handler(event, context):
     return _process_lambda(pfunc)
 
 
+def get_test_zip_file_local_volume_test():
+    pfunc = """
+def lambda_handler(event, context):
+    print("custom log event")
+    return event
+"""
+    return _process_lambda(pfunc)
+
+
 def create_invalid_lambda(role):
     conn = boto3.client("lambda", _lambda_region)
     zip_content = get_test_zip_file1()

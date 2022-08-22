@@ -102,6 +102,7 @@ class _DockerDataVolumeContext:
     def __init__(self, lambda_func):
         self._lambda_func = lambda_func
         self._vol_ref = None
+        self._volume_local_path = None
 
     @property
     def name(self):
@@ -125,10 +126,18 @@ class _DockerDataVolumeContext:
             self._vol_ref.volume = self._lambda_func.docker_client.volumes.create(
                 self._lambda_func.code_digest
             )
+
+            # In some cases, it might be needed by the project to define where on the
+            # machine running the tests the docker volume is mounted locally.
+            # Setting MOTO_DOCKER_LOCAL_VOLUME_PATH env var allows for this
+            self._volume_local_path = settings.moto_docker_local_volume_path()
+            if not self._volume_local_path:
+                self._volume_local_path = "/tmp/data"
+
             if docker_3:
-                volumes = {self.name: {"bind": "/tmp/data", "mode": "rw"}}
+                volumes = {self.name: {"bind": self._volume_local_path, "mode": "rw"}}
             else:
-                volumes = {self.name: "/tmp/data"}
+                volumes = {self.name: self._volume_local_path}
 
             self._lambda_func.docker_client.images.pull(
                 ":".join(parse_image_ref("alpine"))
@@ -138,7 +147,7 @@ class _DockerDataVolumeContext:
             )
             try:
                 tar_bytes = zip2tar(self._lambda_func.code_bytes)
-                container.put_archive("/tmp/data", tar_bytes)
+                container.put_archive(self._volume_local_path, tar_bytes)
             finally:
                 container.remove(force=True)
 

@@ -89,6 +89,10 @@ def moto_network_mode():
     return os.environ.get("MOTO_DOCKER_NETWORK_MODE")
 
 
+def moto_docker_local_volume_path():
+    return os.environ.get("MOTO_DOCKER_LOCAL_VOLUME_PATH")
+
+
 def test_server_mode_endpoint():
     return os.environ.get(
         "TEST_SERVER_MODE_ENDPOINT", f"http://localhost:{moto_server_port()}"
