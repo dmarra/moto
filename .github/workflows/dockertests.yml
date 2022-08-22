@@ -260,7 +260,7 @@ jobs:
         mkdir serverlogs4
         pwd
         ls -la
-        cp server_output.log serverlogs3/server_output.log
+        cp server_output.log serverlogs4/server_output.log
     - name: Archive Logs
       if: always()
       uses: actions/upload-artifact@v2
