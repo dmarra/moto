@@ -250,9 +250,9 @@ jobs:
         TEST_SERVER_MODE: ${{ true }}
         MOTO_PORT: 4555
         MOTO_DOCKER_NETWORK_MODE: host
-        MOTO_DOCKER_LOCAL_VOLUME_PATH: local_volume_path
+        MOTO_DOCKER_LOCAL_VOLUME_PATH: /tmp/local_volume_path
       run: |
-        mkdir local_volume_path
+        mkdir /tmp/local_volume_path
         pytest -sv tests/test_awslambda/test_lambda_invoke.py::test_invoke_lambda_using_local_volume_path tests/test_cloudformation/test_cloudformation_custom_resources.py
     - name: Collect Logs
       if: always()
